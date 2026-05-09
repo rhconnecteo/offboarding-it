@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Offboarding - IT</title>
+  <link rel="icon" type="image/png" href="mathematiques.png">
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+  <!-- ====== SECTION LOGIN ====== -->
+  <div id="loginSection" class="login-overlay">
+    <div class="login-container">
+      <div class="login-box">
+        <div class="login-header">
+          <h1>🔐 Authentication</h1>
+          <p>IT Support - Offboarding Tracking</p>
+        </div>
+        
+        <form id="loginForm" class="login-form">
+          <div class="login-form-group">
+            <label for="username">👤 Utilisateur</label>
+            <input 
+              type="text" 
+              id="username" 
+              name="username" 
+              placeholder="Entrez votre identifiant" 
+              required 
+              autocomplete="username"
+            >
+          </div>
+
+          <div class="login-form-group">
+            <label for="password">🔑 Mot de passe</label>
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              placeholder="Entrez votre mot de passe" 
+              required 
+              autocomplete="current-password"
+            >
+          </div>
+
+          <div id="loginMessage" class="login-message"></div>
+
+          <button type="submit" class="btn btn-login">
+            🚀 Se connecter
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <header class="header">
+    <h1>Support IT - Suivi Offboarding</h1>
+
+    <div class="header-buttons">
+      <button id="btnForm" class="btn active" onclick="showForm()">📝 Formulaire</button>
+      <button id="btnDash" class="btn btn-secondary" onclick="showDashboard()">📊 Dashboard</button>
+      <button id="btnDetail" class="btn btn-secondary" onclick="showDetail()">📋 Détail</button>
+    </div>
+  </header>
+
+
+  <!-- ======================
+        FORMULAIRE
+  ======================= -->
+  <section id="formCard" class="card">
+
+    <h2>📝 Formulaire de suivi Offboarding</h2>
+
+    <div class="form-group">
+      <label>👤 Matricule</label>
+      <select id="matricule" onchange="loadUser()">
+        <option value="">-- Choisir un matricule --</option>
+      </select>
+    </div>
+
+    <div class="info-grid">
+
+      <div>
+        <label>👤 Matricule</label>
+        <div id="affichageMatricule" class="readonly" style="font-weight: bold; color: #0891b2;"></div>
+      </div>
+
+      <div>
+        <label>👥 Nom et Prénoms</label>
+        <div id="nom" class="readonly"></div>
+      </div>
+
+      <div>
+        <label>✓ Statut</label>
+        <div id="statut" class="readonly"></div>
+      </div>
+
+      <div>
+        <label>💼 Fonction</label>
+        <div id="fonction" class="readonly"></div>
+      </div>
+
+      <div>
+        <label>🏢 Rattachement</label>
+        <div id="rattachement" class="readonly"></div>
+      </div>
+
+      <div>
+        <label>📅 Date de départ</label>
+        <div id="datedepart" class="readonly"></div>
+      </div>
+
+      <div>
+        <label>🔐 Login</label>
+        <div id="login" class="readonly"></div>
+      </div>
+
+      <div>
+        <label>📆 Date de création</label>
+        <div id="dateCreation" class="readonly"></div>
+      </div>
+
+      <div>
+        <label>⏰ Date de deadline</label>
+        <div id="deadline" class="readonly"></div>
+      </div>
+
+      <div>
+        <label>🎯 Etat</label>
+        <div id="etat" class="readonly status-box"></div>
+      </div>
+
+      <div>
+        <label>🏁 Date Fin</label>
+        <input type="text" id="dateFin" readonly />
+      </div>
+
+      <div>
+        <label>🎫 Ticket Tyfanie</label>
+        <div id="ticketTyfanieDisplay" class="readonly"></div>
+      </div>
+
+      <div>
+        <label>📊 Statut Suivi</label>
+        <div id="statutSuivi" class="readonly"></div>
+      </div>
+
+    </div>
+
+
+    <hr/>
+
+    <h3>🛠️ Outils</h3>
+
+    <div id="outils"></div>
+
+    <button class="btn btn-secondary" onclick="addOutil()">➕ Ajouter un outil</button>
+
+    <span id="msg" class="msg-display"></span>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="save()">💾 Enregistrer</button>
+    </div>
+
+  </section>
+
+
+  <!-- ======================
+        DASHBOARD
+  ======================= -->
+  <section id="dashboardCard" class="card hidden">
+    <h2>📊 Dashboard - Récapitulatif</h2>
+
+    <div class="dashboard-charts">
+      <div class="chart-container">
+        <h3>📈 Statut Suivi (proportionnel)</h3>
+        <canvas id="chartSuivi"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>🎯 État Global (Terminé / En cours)</h3>
+        <canvas id="chartEtat"></canvas>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <label>📊 Total</label>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <label>⏳ En cours</label>
+        <div class="stat-value" id="statEnCours">0</div>
+      </div>
+      <div class="stat-card stat-success">
+        <label>✅ Respecté</label>
+        <div class="stat-value" id="statRespecte">0</div>
+      </div>
+      <div class="stat-card stat-danger">
+        <label>❌ Non respecté</label>
+        <div class="stat-value" id="statNonRespecte">0</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <input type="text" id="searchBox" placeholder="🔍 Rechercher Matricule / Nom / Login" class="search-input">
+
+      <select id="etatFilter">
+        <option value="">🎯 Tous les Etats</option>
+        <option value="En cours">⏳ En cours</option>
+        <option value="Terminé">✅ Terminé</option>
+      </select>
+
+      <select id="suiviFilter">
+        <option value="">📈 Tous les Statuts Suivi</option>
+        <option value="Respecté">✅ Respecté</option>
+        <option value="Non respecté">❌ Non respecté</option>
+        <option value="En cours">⏳ En cours</option>
+      </select>
+
+      <button class="btn btn-secondary" onclick="loadDashboard()">🔄 Actualiser</button>
+    </div>
+
+    <div class="table-container">
+      <table id="dashboardTable" class="dashboard-table">
+        <thead>
+          <tr>
+            <th>👤 Matricule</th>
+            <th>✓ Statut</th>
+            <th>👥 Nom</th>
+            <th>💼 Fonction</th>
+            <th>🏢 Rattachement</th>
+            <th>🔐 Login</th>
+            <th>📆 Date Création</th>
+            <th>⏰ Deadline</th>
+            <th>🎯 Etat</th>
+            <th>🏁 Date Fin</th>
+            <th>🎫 Ticket Tyfanie</th>
+            <th>📊 Statut Suivi</th>
+            <th>⚙️ Actions</th>
+          </tr>
+        </thead>
+
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </section>
+
+
+  <!-- ======================
+        DETAIL OUTILS
+  ======================= -->
+  <section id="detailCard" class="card hidden">
+    <h2>📋 Liste des outils par collaborateur</h2>
+
+    <!-- Filtres -->
+    <div class="filters-container">
+      <!-- Matricule Filter -->
+      <div class="filter-group">
+        <label>👤 Filtrer par Matricule</label>
+        <div class="searchable-dropdown" id="matriculeDropdown">
+          <input type="text" class="filter-search-input" placeholder="🔍 Rechercher..." data-filter="matricule" onkeyup="filterDropdownOptions(this)">
+          <div class="dropdown-options">
+            <div class="dropdown-option" data-value="">-- Tous les matricules --</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fonction Filter -->
+      <div class="filter-group">
+        <label>💼 Filtrer par Fonction</label>
+        <div class="searchable-dropdown" id="fonctionDropdown">
+          <input type="text" class="filter-search-input" placeholder="🔍 Rechercher..." data-filter="fonction" onkeyup="filterDropdownOptions(this)">
+          <div class="dropdown-options">
+            <div class="dropdown-option" data-value="">-- Toutes les fonctions --</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rattachement Filter -->
+      <div class="filter-group">
+        <label>🏢 Filtrer par Rattachement</label>
+        <div class="searchable-dropdown" id="rattachementDropdown">
+          <input type="text" class="filter-search-input" placeholder="🔍 Rechercher..." data-filter="rattachement" onkeyup="filterDropdownOptions(this)">
+          <div class="dropdown-options">
+            <div class="dropdown-option" data-value="">-- Tous les rattachements --</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statut Filter -->
+      <div class="filter-group">
+        <label>✓ Filtrer par Statut</label>
+        <div class="searchable-dropdown" id="statutDropdown">
+          <input type="text" class="filter-search-input" placeholder="🔍 Rechercher..." data-filter="statut" onkeyup="filterDropdownOptions(this)">
+          <div class="dropdown-options">
+            <div class="dropdown-option" data-value="">-- Tous les statuts --</div>
+            <div class="dropdown-option" data-value="En cours">⏳ En cours</div>
+            <div class="dropdown-option" data-value="Terminé">✅ Terminé</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ticket Filter -->
+      <div class="filter-group">
+        <label>🎟️ Filtrer par N° Ticket</label>
+        <div class="searchable-dropdown" id="ticketDropdown">
+          <input type="text" class="filter-search-input" placeholder="🔍 Rechercher..." data-filter="ticket" onkeyup="filterDropdownOptions(this)">
+          <div class="dropdown-options">
+            <div class="dropdown-option" data-value="">-- Tous les tickets --</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" onclick="resetDetailFilters()">🔄 Réinitialiser</button>
+    </div>
+
+    <!-- Tableau -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>👤 Matricule</th>
+            <th>👥 Nom</th>
+            <th>💼 Fonction</th>
+            <th>🏢 Rattachement</th>
+            <th>🔐 Login</th>
+            <th>🛠️ Outil</th>
+            <th>🎟️ N° Ticket</th>
+            <th>✓ Statut</th>
+            <th>📅 Date Début</th>
+            <th>🏁 Date Fin</th>
+            <th>⚙️ Actions</th>
+          </tr>
+        </thead>
+        <tbody id="detailTableBody">
+        </tbody>
+      </table>
+    </div>
+
+    <div id="detailEmptyMessage" style="text-align: center; padding: 20px; color: #999; display: none;">
+      Aucune donnée à afficher
+    </div>
+
+  </section>
+
+
+  <!-- ======================
+        MODAL DETAILS OUTILS
+  ======================= -->
+  <div id="detailsModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><span id="detailsModalMatricule">--</span> <span id="detailsModalNom"></span></h3>
+        <button class="modal-close" onclick="closeDetails()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Infos générales -->
+        <div class="details-info">
+          <div class="info-item">
+            <label>📅 Date de création (Login)</label>
+            <div class="info-value" id="detailsDateCreation">-</div>
+          </div>
+          <div class="info-item">
+            <label>⏰ Deadline</label>
+            <div class="info-value" id="detailsDeadline">-</div>
+          </div>
+        </div>
+
+        <!-- Séparateur -->
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e6e9ee;">
+
+        <!-- Détail des outils -->
+        <h4 style="margin: 0 0 15px 0; color: var(--muted); font-size: 13px; font-weight: 600;">Détail des outils</h4>
+        <table class="details-table">
+          <thead>
+            <tr>
+              <th>Outil</th>
+              <th>Statut</th>
+              <th>Date Début</th>
+              <th>Date Fin</th>
+            </tr>
+          </thead>
+          <tbody id="detailsTableBody">
+          </tbody>
+        </table>
+      </div>
+      <!-- <div class="modal-footer">
+        <button class="btn custom-btn" onclick="closeDetails()">✕ Fermer</button>
+
+      </div> -->
+    </div>
+  </div>
+
+
+  <script src="script.js"></script>
+</body>
+</html>
