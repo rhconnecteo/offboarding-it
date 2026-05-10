@@ -9,7 +9,7 @@ let isAuthenticated = false;
 // ===============================
 // CONFIG API
 // ===============================
-const API_URL = "https://script.google.com/macros/s/AKfycbxaVEIGu9QKGnWOKibaXGzllPoplRMildpb93VPreXx6genry7t3WvvAVXJuDEi9Aze/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyOAdpmGIvXgLeXWM8eHk2Ot2yhvBysFM2ixrCdatgN5eOnbFpEM-uLCpKdWYWC0Py9/exec";
 
 function apiRequest(action, params = {}) {
   return new Promise((resolve, reject) => {
@@ -327,10 +327,14 @@ function parseFR(dateFR) {
 // ===============================
 // API GET USERS
 // ===============================
-async function loadUsers() {
+async function loadUsers(includeTermine = false) {
   try {
-    const data = await apiRequest("getUsers");
-    users = data || [];
+    // Si on demande d'inclure les terminés, utiliser l'API dashboard (tous les users)
+    const action = includeTermine ? "getDashboard" : "getUsers";
+    const data = await apiRequest(action);
+
+    // Si on ne veut pas inclure les terminés, les filtrer côté client
+    users = (data || []).filter(u => includeTermine ? true : String(u.etat || "").trim() !== "Terminé");
 
     el.matricule.innerHTML = `<option value="">-- Choisir un matricule --</option>`;
 
@@ -741,21 +745,15 @@ function updateEtat() {
   if (!currentUser) return;
 
   const outils = currentUser.outils || [];
+  const previousEtat = currentUser.etat;
 
   const allTermine = outils.length > 0 && outils.every(o => o.statut === "Terminé");
 
   if (allTermine) {
     currentUser.etat = "Terminé";
 
-    // Récupérer les dates de fin (dateFin) pour trouver la plus récente
-    const dates = outils
-      .filter(o => o.dateFin && o.dateFin !== "")
-      .map(o => o.dateFin);
-
-    if (dates.length > 0) {
-      // dernière date (la plus récente)
-      currentUser.dateFin = dates[dates.length - 1];
-    } else {
+    // La date de fin globale doit correspondre au jour où l'Etat passe à Terminé.
+    if (previousEtat !== "Terminé" || !currentUser.dateFin) {
       currentUser.dateFin = todayFR();
     }
   } else {
@@ -847,7 +845,8 @@ window.save = async function () {
       el.msg.style.color = "green";
 
       // Recharger les données du serveur pour mettre à jour Etat et StatutSuivi
-      await loadUsers();
+      // Inclure les terminés pour pouvoir re-sélectionner l'utilisateur qui vient de passer à Terminé
+      await loadUsers(true);
       
       // Récupérer le matricule du currentUser AVANT le reload
       const matriculeToReload = currentUser.matricule;
