@@ -9,7 +9,7 @@ let isAuthenticated = false;
 // ===============================
 // CONFIG API
 // ===============================
-const API_URL = "https://script.google.com/macros/s/AKfycbyOAdpmGIvXgLeXWM8eHk2Ot2yhvBysFM2ixrCdatgN5eOnbFpEM-uLCpKdWYWC0Py9/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby7-XJICMg_CM64AAdl_lA6XQdFZ4Ww5RrAX93fW9zW7BWVElBMNZOVJoKDBUvohX9l/exec";
 
 function apiRequest(action, params = {}) {
   return new Promise((resolve, reject) => {
@@ -76,6 +76,7 @@ function initializeElements() {
     dateCreation: document.getElementById("dateCreation"),
     deadline: document.getElementById("deadline"),
     outils: document.getElementById("outils"),
+    materiels: document.getElementById("materiels"),
     etat: document.getElementById("etat"),
     dateFin: document.getElementById("dateFin"),
     ticketTyfanieDisplay: document.getElementById("ticketTyfanieDisplay"),
@@ -229,6 +230,7 @@ let currentUser = null;
 let dashboardData = [];
 let chartSuivi = null;
 let chartEtat = null;
+let chartMaterielStatut = null;
 let detailsCache = {}; // Cache pour stocker les données de détails
 let isSaving = false; // 🔥 Flag pour empêcher les clics multiples
 
@@ -466,6 +468,10 @@ window.loadUser = function () {
     return;
   }
 
+  // 🔥 LOG DE DEBUG
+  console.log("✅ Utilisateur chargé:", currentUser);
+  console.log("✅ Matériels dans currentUser:", currentUser.materiels);
+
   // Normaliser les outils (ancienne structure → nouvelle)
   if (!currentUser.outils) {
     currentUser.outils = [];
@@ -488,6 +494,7 @@ window.loadUser = function () {
   el.deadline.textContent = currentUser.deadline || "";
 
   renderOutils();
+  renderMateriels();
   updateEtat();
 
   el.msg.textContent = "";
@@ -584,6 +591,157 @@ function renderOutils() {
 
 
 // ===============================
+// RENDER MATERIELS
+// ===============================
+function renderMateriels() {
+  if (!currentUser) return;
+
+  el.materiels.innerHTML = "";
+  const container = document.createElement("div");
+  container.className = "outils-container";
+
+  const materiels = currentUser.materiels || [];
+
+  materiels.forEach((m, idx) => {
+    const card = document.createElement("div");
+    card.className = "outil-card";
+
+    const statusClass = m.statut === "Rendu" ? "termine" : m.statut === "À ne pas rendre" ? "rejete" : "en-cours";
+
+    card.innerHTML = `
+      <span class="outil-status-badge ${statusClass}">${m.statut || "Non Rendu"}</span>
+
+      <div class="outil-box">
+        <label>📦 Matériel</label>
+        <select class="materiel-nom" data-index="${idx}">
+          <option value="">-- Choisir un matériel --</option>
+          <option value="Ecran" ${m.materiel === "Ecran" ? 'selected' : ''}>Ecran</option>
+          <option value="Laptop" ${m.materiel === "Laptop" ? 'selected' : ''}>Laptop</option>
+          <option value="Souris" ${m.materiel === "Souris" ? 'selected' : ''}>Souris</option>
+        </select>
+      </div>
+
+      <div class="outil-box">
+        <label>🏷️ Fabricant</label>
+        <input type="text" class="materiel-fabricant" data-index="${idx}" value="${m.fabricant || ""}" placeholder="Ex: Dell, HP..." />
+      </div>
+
+      <div class="outil-box">
+        <label>🧾 Modèle</label>
+        <input type="text" class="materiel-modele" data-index="${idx}" value="${m.modele || ""}" placeholder="Ex: Inspiron 15" />
+      </div>
+
+      <div class="outil-box">
+        <label>🔎 Numéro de série</label>
+        <input type="text" class="materiel-serial" data-index="${idx}" value="${m.serial || ""}" placeholder="Ex: 123456789" />
+      </div>
+
+      <div class="outil-box">
+        <label>✓ Statut</label>
+        <select class="materiel-statut" data-index="${idx}">
+          <option value="Rendu" ${m.statut === "Rendu" ? 'selected' : ''}>Rendu</option>
+          <option value="Non Rendu" ${m.statut === "Non Rendu" ? 'selected' : ''}>Non Rendu</option>
+          <option value="À ne pas rendre" ${m.statut === "À ne pas rendre" ? 'selected' : ''}>À ne pas rendre</option>
+        </select>
+      </div>
+
+      <button class="outil-delete-btn" data-index="${idx}" onclick="deleteMateriel(${idx})">
+        🗑️ Supprimer
+      </button>
+    `;
+
+    container.appendChild(card);
+  });
+
+  el.materiels.appendChild(container);
+  setupMaterielsEvents();
+}
+
+
+// ===============================
+// ADD MATERIEL
+// ===============================
+window.addMateriel = function () {
+  if (!currentUser) {
+    el.msg.textContent = "❌ Veuillez d'abord sélectionner un collaborateur";
+    el.msg.style.color = "red";
+    return;
+  }
+
+  if (!currentUser.materiels) currentUser.materiels = [];
+
+  currentUser.materiels.push({
+    materiel: "",
+    fabricant: "",
+    modele: "",
+    serial: "",
+    statut: "Non Rendu"
+  });
+
+  renderMateriels();
+};
+
+
+// ===============================
+// DELETE MATERIEL
+// ===============================
+window.deleteMateriel = function (idx) {
+  if (!currentUser || !currentUser.materiels) return;
+
+  currentUser.materiels.splice(idx, 1);
+  renderMateriels();
+};
+
+
+// ===============================
+// SETUP MATERIELS EVENTS
+// ===============================
+function setupMaterielsEvents() {
+  const materielSelects = document.querySelectorAll('.materiel-nom');
+  const fabricantInputs = document.querySelectorAll('.materiel-fabricant');
+  const modeleInputs = document.querySelectorAll('.materiel-modele');
+  const serialInputs = document.querySelectorAll('.materiel-serial');
+  const statutSelects = document.querySelectorAll('.materiel-statut');
+
+  materielSelects.forEach(select => {
+    select.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.dataset.index);
+      currentUser.materiels[idx].materiel = e.target.value || "";
+    });
+  });
+
+  fabricantInputs.forEach(input => {
+    input.addEventListener('input', (e) => {
+      const idx = parseInt(e.target.dataset.index);
+      currentUser.materiels[idx].fabricant = e.target.value || "";
+    });
+  });
+
+  modeleInputs.forEach(input => {
+    input.addEventListener('input', (e) => {
+      const idx = parseInt(e.target.dataset.index);
+      currentUser.materiels[idx].modele = e.target.value || "";
+    });
+  });
+
+  serialInputs.forEach(input => {
+    input.addEventListener('input', (e) => {
+      const idx = parseInt(e.target.dataset.index);
+      currentUser.materiels[idx].serial = e.target.value || "";
+    });
+  });
+
+  statutSelects.forEach(select => {
+    select.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.dataset.index);
+      currentUser.materiels[idx].statut = e.target.value || "Non Rendu";
+      renderMateriels();
+    });
+  });
+}
+
+
+// ===============================
 // ADD OUTIL
 // ===============================
 window.addOutil = function () {
@@ -597,7 +755,7 @@ window.addOutil = function () {
     outil: "",
     ticket: "",
     statut: "En cours",
-    dateDebut: todayFR(),  // 🔥 Date du jour J
+    dateDebut: todayFR(),
     dateFin: ""
   });
 
@@ -778,7 +936,6 @@ function updateEtat() {
 // SAVE USER
 // ===============================
 window.save = async function () {
-  // 🔥 Empêcher les clics multiples avec le flag
   if (isSaving) {
     return;
   }
@@ -795,45 +952,90 @@ window.save = async function () {
 
   const noms = document.querySelectorAll(".outil-nom");
   const statuts = document.querySelectorAll(".outil-statut");
+  const materielTypes = document.querySelectorAll(".materiel-nom");
+  const fabricants = document.querySelectorAll(".materiel-fabricant");
+  const modeles = document.querySelectorAll(".materiel-modele");
+  const serials = document.querySelectorAll(".materiel-serial");
+  const materielStatuts = document.querySelectorAll(".materiel-statut");
 
   noms.forEach(inp => {
     const idx = parseInt(inp.dataset.index);
-    currentUser.outils[idx].outil = inp.value;
+    if (currentUser.outils[idx]) currentUser.outils[idx].outil = inp.value;
   });
 
   statuts.forEach(sel => {
     const idx = parseInt(sel.dataset.index);
-    currentUser.outils[idx].statut = sel.value;
+    if (currentUser.outils[idx]) currentUser.outils[idx].statut = sel.value;
   });
 
-  // 🔥 VALIDATION : Vérifier s'il y a des outils vides
+  currentUser.materiels = currentUser.materiels || [];
+
+  materielTypes.forEach(select => {
+    const idx = parseInt(select.dataset.index);
+    if (!currentUser.materiels[idx]) return;
+    currentUser.materiels[idx].materiel = select.value || "";
+  });
+
+  fabricants.forEach(input => {
+    const idx = parseInt(input.dataset.index);
+    if (!currentUser.materiels[idx]) return;
+    currentUser.materiels[idx].fabricant = input.value || "";
+  });
+
+  modeles.forEach(input => {
+    const idx = parseInt(input.dataset.index);
+    if (!currentUser.materiels[idx]) return;
+    currentUser.materiels[idx].modele = input.value || "";
+  });
+
+  serials.forEach(input => {
+    const idx = parseInt(input.dataset.index);
+    if (!currentUser.materiels[idx]) return;
+    currentUser.materiels[idx].serial = input.value || "";
+  });
+
+  materielStatuts.forEach(select => {
+    const idx = parseInt(select.dataset.index);
+    if (!currentUser.materiels[idx]) return;
+    currentUser.materiels[idx].statut = select.value || "Non Rendu";
+  });
+
   const outilsVides = currentUser.outils.filter(o => !o.outil || o.outil.trim() === "");
-  
   if (outilsVides.length > 0) {
-    // Mettre la zone d'outils en rouge
     el.outils.style.border = "3px solid #ef4444";
     el.outils.style.backgroundColor = "#fef2f2";
     el.outils.style.padding = "16px";
     el.outils.style.borderRadius = "8px";
-    
+
     el.msg.textContent = "❌ Veuillez sélectionner un outil pour chaque ligne AVANT d'enregistrer !";
     el.msg.style.color = "red";
     el.msg.style.fontWeight = "bold";
-    
+
     isSaving = false;
     return;
   } else {
-    // Enlever le style rouge si validation OK
     el.outils.style.border = "";
     el.outils.style.backgroundColor = "";
     el.outils.style.padding = "";
     el.outils.style.borderRadius = "";
   }
 
-  // 🔥 Supprimer les outils vides (si validation OK)
   currentUser.outils = currentUser.outils.filter(o => o.outil && o.outil.trim() !== "");
+  currentUser.materiels = currentUser.materiels.filter(m => {
+    const hasData = (m.materiel && m.materiel.trim() !== "") ||
+                    (m.fabricant && m.fabricant.trim() !== "") ||
+                    (m.modele && m.modele.trim() !== "") ||
+                    (m.serial && m.serial.trim() !== "") ||
+                    (m.statut && m.statut !== "Non Rendu");
+    return hasData;
+  });
 
   updateEtat();
+
+  // 🔥 LOG DE DEBUG : affiche les données avant l'API
+  console.log("✅ Ligne à sauvegarder:", currentUser.row, "Matricule:", currentUser.matricule);
+  console.log("✅ Données matériel à envoyer:", currentUser.materiels);
+  console.log("✅ Données outils à envoyer:", currentUser.outils);
 
   try {
     const result = await apiRequest("saveUser", {
@@ -843,26 +1045,16 @@ window.save = async function () {
     if (result.success) {
       el.msg.textContent = "✅ Enregistré avec succès";
       el.msg.style.color = "green";
-
-      // Recharger les données du serveur pour mettre à jour Etat et StatutSuivi
-      // Inclure les terminés pour pouvoir re-sélectionner l'utilisateur qui vient de passer à Terminé
       await loadUsers(true);
-      
-      // Récupérer le matricule du currentUser AVANT le reload
       const matriculeToReload = currentUser.matricule;
-      
-      // Sélectionner à nouveau avec le matricule
       el.matricule.value = matriculeToReload;
       loadUser();
-      
-      // IMPORTANT: Débloquer AVANT de terminer
       isSaving = false;
     } else {
       el.msg.textContent = "❌ Erreur lors de l'enregistrement";
       el.msg.style.color = "red";
       isSaving = false;
     }
-
   } catch (err) {
     el.msg.textContent = "❌ Impossible de contacter l'API";
     el.msg.style.color = "red";
@@ -900,6 +1092,7 @@ function resetForm() {
   el.ticketTyfanieDisplay.textContent = "";
   el.statutSuivi.textContent = "";
   el.outils.innerHTML = "";
+  el.materiels.innerHTML = "";
   currentUser = null;
 }
 
@@ -966,10 +1159,43 @@ function updateStats() {
   const respecte = dashboardData.filter(u => u.statutSuivi === "Respecté").length;
   const nonRespecte = dashboardData.filter(u => u.statutSuivi === "Non respecté").length;
 
+  const outils = dashboardData.flatMap(u => u.outils || []);
+  const materiels = dashboardData.flatMap(u => u.materiels || []);
+  const materielTotal = materiels.filter(m => m.statut !== "À ne pas rendre").length;
+
+  const toolProgressPercent = total ? Math.round(((respecte + nonRespecte) / total) * 100) : 0;
+
+  const collaboratorWithMateriel = dashboardData.filter(u => (u.materiels || []).length > 0);
+  const materielCollaboratorsTotal = collaboratorWithMateriel.length;
+  const materielCollaboratorRespecte = collaboratorWithMateriel.filter(u => u.statutSuivi === "Respecté").length;
+  const materielCollaboratorNonRespecte = collaboratorWithMateriel.filter(u => u.statutSuivi === "Non respecté").length;
+  const materielCollaboratorEnCours = collaboratorWithMateriel.filter(u => u.statutSuivi === "En cours").length;
+  const materielProgressPercent = materielCollaboratorsTotal ? Math.round(((materielCollaboratorRespecte + materielCollaboratorNonRespecte) / materielCollaboratorsTotal) * 100) : 0;
+
+  document.getElementById("statCollaborateursTotal").textContent = total;
+  document.getElementById("statOutilsTotal").textContent = outils.length;
+  document.getElementById("statMaterielItemsTotal").textContent = materielTotal;
+
   document.getElementById("statTotal").textContent = total;
   document.getElementById("statEnCours").textContent = enCours;
   document.getElementById("statRespecte").textContent = respecte;
   document.getElementById("statNonRespecte").textContent = nonRespecte;
+  document.getElementById("statMaterielTotal").textContent = materiels.length;
+  document.getElementById("statMaterielRendu").textContent = materiels.filter(m => m.statut === "Rendu").length;
+  document.getElementById("statMaterielNonRendu").textContent = materiels.filter(m => m.statut === "Non Rendu").length;
+  document.getElementById("statMaterielNoReturn").textContent = materiels.filter(m => m.statut === "À ne pas rendre").length;
+
+  document.getElementById("toolProgressPercent").textContent = `${toolProgressPercent}%`;
+  document.getElementById("toolProgressSubtext").textContent = `${respecte + nonRespecte} / ${total} traités`;
+  document.getElementById("toolRespecte").textContent = respecte;
+  document.getElementById("toolEnCours").textContent = enCours;
+  document.getElementById("toolNonRespecte").textContent = nonRespecte;
+
+  document.getElementById("materielProgressPercent").textContent = `${materielProgressPercent}%`;
+  document.getElementById("materielProgressSubtext").textContent = `${materielCollaboratorRespecte + materielCollaboratorNonRespecte} / ${materielCollaboratorsTotal} traités`;
+  document.getElementById("materielRespecteSummary").textContent = materielCollaboratorRespecte;
+  document.getElementById("materielEnCoursSummary").textContent = materielCollaboratorEnCours;
+  document.getElementById("materielNonRespecteSummary").textContent = materielCollaboratorNonRespecte;
 }
 
 function updateCharts() {
@@ -1031,6 +1257,40 @@ function updateCharts() {
           data: [etatTermine, etatEnCours],
           backgroundColor: ["#3b82f6", "#6b7280"],
           borderColor: ["#1e40af", "#4b5563"],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { position: "bottom", labels: { padding: 12, font: { size: 12 }, usePointStyle: true } }
+        }
+      }
+    });
+  } catch (err) {
+    // Erreur silencieuse
+  }
+
+  try {
+    const materielCollaborators = dashboardData.filter(u => (u.materiels || []).length > 0);
+    const materielRespecte = materielCollaborators.filter(u => u.statutSuivi === "Respecté").length;
+    const materielNonRespecte = materielCollaborators.filter(u => u.statutSuivi === "Non respecté").length;
+    const materielEnCours = materielCollaborators.filter(u => u.statutSuivi === "En cours").length;
+
+    const ctxMateriel = document.getElementById("chartMaterielStatut");
+    if (!ctxMateriel) return;
+
+    if (chartMaterielStatut) chartMaterielStatut.destroy();
+
+    chartMaterielStatut = new Chart(ctxMateriel, {
+      type: "doughnut",
+      data: {
+        labels: ["Respecté", "Non respecté", "En cours"],
+        datasets: [{
+          data: [materielRespecte, materielNonRespecte, materielEnCours],
+          backgroundColor: ["#10b981", "#ef4444", "#f59e0b"],
+          borderColor: ["#059669", "#dc2626", "#d97706"],
           borderWidth: 2
         }]
       },

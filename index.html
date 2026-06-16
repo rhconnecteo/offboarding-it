@@ -159,6 +159,14 @@
 
     <button class="btn btn-secondary" onclick="addOutil()">➕ Ajouter un outil</button>
 
+    <hr/>
+
+    <h3>🎒 Matériel</h3>
+
+    <div id="materiels"></div>
+
+    <button class="btn btn-secondary" onclick="addMateriel()">➕ Ajouter un matériel</button>
+
     <span id="msg" class="msg-display"></span>
 
     <div class="actions">
@@ -174,14 +182,79 @@
   <section id="dashboardCard" class="card hidden">
     <h2>📊 Dashboard - Récapitulatif</h2>
 
+    <div class="summary-row">
+      <div class="summary-card">
+        <h3>� Nombre de collaborateurs</h3>
+        <div class="summary-value" id="statCollaborateursTotal">0</div>
+        <div class="summary-text">Total collaborateurs suivis</div>
+      </div>
+      <div class="summary-card">
+        <h3>🛠️ Outils à supprimer</h3>
+        <div class="summary-value" id="statOutilsTotal">0</div>
+        <div class="summary-text">Total d'outils à traiter</div>
+      </div>
+      <div class="summary-card">
+        <h3>📦 Matériel à restituer</h3>
+        <div class="summary-value" id="statMaterielItemsTotal">0</div>
+        <div class="summary-text">Total de matériels à restituer</div>
+      </div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-card">
+        <h3>🛠️ Outils à supprimer</h3>
+        <div class="summary-value" id="toolProgressPercent">0%</div>
+        <div class="summary-text">Progression des collaborateurs</div>
+        <div class="summary-subtext" id="toolProgressSubtext">0 / 0 traités</div>
+        <div class="summary-breakdown">
+          <div class="summary-item">
+            <strong id="toolRespecte">0</strong>
+            <span>Respecté</span>
+          </div>
+          <div class="summary-item">
+            <strong id="toolEnCours">0</strong>
+            <span>En cours</span>
+          </div>
+          <div class="summary-item">
+            <strong id="toolNonRespecte">0</strong>
+            <span>Non respecté</span>
+          </div>
+        </div>
+      </div>
+      <div class="summary-card">
+        <h3>📦 Matériel à restituer</h3>
+        <div class="summary-value" id="materielProgressPercent">0%</div>
+        <div class="summary-text">Progression des collaborateurs</div>
+        <div class="summary-subtext" id="materielProgressSubtext">0 / 0 traités</div>
+        <div class="summary-breakdown">
+          <div class="summary-item">
+            <strong id="materielRespecteSummary">0</strong>
+            <span>Respecté</span>
+          </div>
+          <div class="summary-item">
+            <strong id="materielEnCoursSummary">0</strong>
+            <span>En cours</span>
+          </div>
+          <div class="summary-item">
+            <strong id="materielNonRespecteSummary">0</strong>
+            <span>Non respecté</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="dashboard-charts">
       <div class="chart-container">
-        <h3>📈 Statut Suivi (proportionnel)</h3>
+        <h3>📈 Outils - Répartition collaborateurs</h3>
         <canvas id="chartSuivi"></canvas>
       </div>
       <div class="chart-container">
         <h3>🎯 État Global (Terminé / En cours)</h3>
         <canvas id="chartEtat"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>📦 Matériel - Répartition collaborateurs</h3>
+        <canvas id="chartMaterielStatut"></canvas>
       </div>
     </div>
 
@@ -201,6 +274,25 @@
       <div class="stat-card stat-danger">
         <label>❌ Non respecté</label>
         <div class="stat-value" id="statNonRespecte">0</div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card stat-secondary">
+        <label>📦 Total matériel</label>
+        <div class="stat-value" id="statMaterielTotal">0</div>
+      </div>
+      <div class="stat-card stat-success">
+        <label>✅ Rendu</label>
+        <div class="stat-value" id="statMaterielRendu">0</div>
+      </div>
+      <div class="stat-card stat-warning">
+        <label>⛔ Non rendu</label>
+        <div class="stat-value" id="statMaterielNonRendu">0</div>
+      </div>
+      <div class="stat-card stat-muted">
+        <label>🚫 À ne pas rendre</label>
+        <div class="stat-value" id="statMaterielNoReturn">0</div>
       </div>
     </div>
 
