@@ -81,6 +81,7 @@
       </select>
     </div>
 
+
     <div class="info-grid">
 
       <div>
@@ -141,6 +142,13 @@
       <div>
         <label>🎫 Ticket Tyfanie</label>
         <div id="ticketTyfanieDisplay" class="readonly"></div>
+      </div>
+
+      <div class="checkbox-card">
+        <label>
+          <input type="checkbox" id="noToolDeleteCheckbox" onchange="toggleNoToolDelete()" />
+          ⛔ Aucune suppression d'outils requise
+        </label>
       </div>
 
       <div>
@@ -249,12 +257,16 @@
         <canvas id="chartSuivi"></canvas>
       </div>
       <div class="chart-container">
-        <h3>🎯 État Global (Terminé / En cours)</h3>
-        <canvas id="chartEtat"></canvas>
+        <h3>🛠️ État Outils (Terminé / En cours)</h3>
+        <canvas id="chartEtatOutils"></canvas>
       </div>
       <div class="chart-container">
         <h3>📦 Matériel - Répartition collaborateurs</h3>
         <canvas id="chartMaterielStatut"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>📦 État Matériel (Terminé / En cours)</h3>
+        <canvas id="chartEtatMateriel"></canvas>
       </div>
     </div>
 

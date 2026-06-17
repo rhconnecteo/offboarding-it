@@ -287,7 +287,7 @@ function getUsersAPI() {
     const matriculeRest = String((restitutionData[j][restitutionMatriculeCol] || "")).trim();
     if (!matriculeRest) continue;
     restitutionsByMatricule[matriculeRest] = parseDynamicItems(restitutionData[j], materielsStart, [
-      'materiel', 'fabricant', 'modele', 'serial', 'statut'
+      'materiel', 'fabricant', 'modele', 'serial', 'statut', 'date'
     ]);
   }
 
@@ -493,13 +493,14 @@ function saveUserAPI(user) {
 
   if (user.materiels && user.materiels.length > 0) {
     user.materiels.forEach((m, i) => {
-      const colOneBased = restitutionStartColOneBased + i * 5;
+      const colOneBased = restitutionStartColOneBased + i * 6;
 
       restitutionSh.getRange(restitutionRow, colOneBased).setValue(m.materiel || "");
       restitutionSh.getRange(restitutionRow, colOneBased + 1).setValue(m.fabricant || "");
       restitutionSh.getRange(restitutionRow, colOneBased + 2).setValue(m.modele || "");
       restitutionSh.getRange(restitutionRow, colOneBased + 3).setValue(m.serial || "");
       restitutionSh.getRange(restitutionRow, colOneBased + 4).setValue(m.statut || "Non Rendu");
+      restitutionSh.getRange(restitutionRow, colOneBased + 5).setValue(m.date || "");
     });
   }
 
@@ -517,6 +518,15 @@ function saveUserAPI(user) {
           // Prefer user-provided dateFin, otherwise use today's date
           const toWrite = user.dateFin && String(user.dateFin).trim() ? new Date(user.dateFin) : new Date();
           sh.getRange(row, dateFinCol + 1).setValue(toWrite);
+          // Also write Date Fin into restitution sheet (column K expected)
+          try {
+            const restitutionDateFinCol = getMainColumnIndex('date fin', restitutionHeaderMap, restitutionSh, restitutionToolsStart, 11);
+            if (typeof restitutionDateFinCol === 'number') {
+              restitutionSh.getRange(restitutionRow, restitutionDateFinCol + 1).setValue(toWrite);
+            }
+          } catch (e2) {
+            Logger.log('Impossible d\'écrire dateFin dans restitution: ' + e2.message);
+          }
         } else {
           // Not all returned: clear dateFin to indicate incomplete
           sh.getRange(row, dateFinCol + 1).setValue('');

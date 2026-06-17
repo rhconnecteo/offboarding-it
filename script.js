@@ -9,7 +9,7 @@ let isAuthenticated = false;
 // ===============================
 // CONFIG API
 // ===============================
-const API_URL = "https://script.google.com/macros/s/AKfycby7-XJICMg_CM64AAdl_lA6XQdFZ4Ww5RrAX93fW9zW7BWVElBMNZOVJoKDBUvohX9l/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzces7sj6EOYgX01Ec5CssK7OZQuibeBHn8TfvhFY10gugsddH9iTf7MScqx0ApMGPI/exec";
 
 function apiRequest(action, params = {}) {
   return new Promise((resolve, reject) => {
@@ -66,6 +66,7 @@ function initializeElements() {
     username: document.getElementById("username"),
     password: document.getElementById("password"),
     matricule: document.getElementById("matricule"),
+    noToolDeleteCheckbox: document.getElementById("noToolDeleteCheckbox"),
     affichageMatricule: document.getElementById("affichageMatricule"),
     nom: document.getElementById("nom"),
     statut: document.getElementById("statut"),
@@ -231,6 +232,8 @@ let dashboardData = [];
 let chartSuivi = null;
 let chartEtat = null;
 let chartMaterielStatut = null;
+let chartEtatOutils = null;
+let chartEtatMateriel = null;
 let detailsCache = {}; // Cache pour stocker les données de détails
 let isSaving = false; // 🔥 Flag pour empêcher les clics multiples
 
@@ -291,9 +294,27 @@ function todayFR() {
 function convertToISO(dateFR) {
   if (!dateFR) return "";
 
-  if (dateFR.includes("-")) return dateFR;
+  if (dateFR instanceof Date) {
+    if (Number.isNaN(dateFR.getTime())) return "";
+    const dd = String(dateFR.getDate()).padStart(2, "0");
+    const mm = String(dateFR.getMonth() + 1).padStart(2, "0");
+    const yyyy = dateFR.getFullYear();
+    return `${yyyy}-${mm}-${dd}`;
+  }
 
-  const parts = dateFR.split("/");
+  if (typeof dateFR === "number") {
+    const d = new Date(dateFR);
+    if (Number.isNaN(d.getTime())) return "";
+    return convertToISO(d);
+  }
+
+  if (typeof dateFR !== "string") return "";
+
+  const trimmed = dateFR.trim();
+  if (!trimmed) return "";
+  if (trimmed.includes("-")) return trimmed;
+
+  const parts = trimmed.split("/");
   if (parts.length !== 3) return "";
 
   const dd = parts[0].padStart(2, "0");
@@ -309,9 +330,45 @@ function convertToISO(dateFR) {
 // ===============================
 function convertToFR(dateISO) {
   if (!dateISO) return "";
-  const parts = dateISO.split("-");
-  if (parts.length !== 3) return "";
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+  if (dateISO instanceof Date) {
+    if (Number.isNaN(dateISO.getTime())) return "";
+    const dd = String(dateISO.getDate()).padStart(2, "0");
+    const mm = String(dateISO.getMonth() + 1).padStart(2, "0");
+    const yyyy = dateISO.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  if (typeof dateISO === "number") {
+    const d = new Date(dateISO);
+    if (Number.isNaN(d.getTime())) return "";
+    return convertToFR(d);
+  }
+
+  if (typeof dateISO !== "string") return "";
+
+  const trimmed = dateISO.trim();
+  if (!trimmed) return "";
+
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+  }
+
+  if (trimmed.includes("/")) {
+    const parts = trimmed.split("/");
+    if (parts.length === 3) return trimmed;
+  }
+
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    const dd = String(parsed.getDate()).padStart(2, "0");
+    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+    const yyyy = parsed.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  return "";
 }
 
 
@@ -320,9 +377,29 @@ function convertToFR(dateISO) {
 // ===============================
 function parseFR(dateFR) {
   if (!dateFR) return null;
-  const p = dateFR.split("/");
-  if (p.length !== 3) return null;
-  return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+
+  if (dateFR instanceof Date) {
+    return Number.isNaN(dateFR.getTime()) ? null : dateFR;
+  }
+
+  if (typeof dateFR === "number") {
+    const d = new Date(dateFR);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  if (typeof dateFR !== "string") return null;
+
+  const trimmed = dateFR.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.includes("/")) {
+    const p = trimmed.split("/");
+    if (p.length !== 3) return null;
+    return new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
+  }
+
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 
@@ -481,6 +558,9 @@ window.loadUser = function () {
 
   el.dateFin.removeEventListener('change', handleDateFinChange);
   el.dateFin.addEventListener('change', handleDateFinChange);
+
+  currentUser.noToolDeletion = !!currentUser.noToolDeletion;
+  el.noToolDeleteCheckbox.checked = currentUser.noToolDeletion;
 
   el.affichageMatricule.textContent = currentUser.matricule || "";
   el.nom.textContent = currentUser.nom || "";
@@ -645,6 +725,11 @@ function renderMateriels() {
         </select>
       </div>
 
+      <div class="outil-box">
+        <label>📅 Date</label>
+        <input type="date" class="materiel-date" data-index="${idx}" value="${m.date ? convertToISO(m.date) : ''}" />
+      </div>
+
       <button class="outil-delete-btn" data-index="${idx}" onclick="deleteMateriel(${idx})">
         🗑️ Supprimer
       </button>
@@ -675,7 +760,8 @@ window.addMateriel = function () {
     fabricant: "",
     modele: "",
     serial: "",
-    statut: "Non Rendu"
+    statut: "Non Rendu",
+    date: todayFR()
   });
 
   renderMateriels();
@@ -702,6 +788,7 @@ function setupMaterielsEvents() {
   const modeleInputs = document.querySelectorAll('.materiel-modele');
   const serialInputs = document.querySelectorAll('.materiel-serial');
   const statutSelects = document.querySelectorAll('.materiel-statut');
+  const dateInputs = document.querySelectorAll('.materiel-date');
 
   materielSelects.forEach(select => {
     select.addEventListener('change', (e) => {
@@ -736,6 +823,14 @@ function setupMaterielsEvents() {
       const idx = parseInt(e.target.dataset.index);
       currentUser.materiels[idx].statut = e.target.value || "Non Rendu";
       renderMateriels();
+    });
+  });
+
+  dateInputs.forEach(input => {
+    input.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.dataset.index);
+      const iso = e.target.value || "";
+      currentUser.materiels[idx].date = convertToFR(iso);
     });
   });
 }
@@ -883,17 +978,40 @@ function setupOutilsEvents() {
 // ===============================
 // CALCUL STATUT SUIVI
 // ===============================
-function calcStatutSuivi(deadline, dateFin, etat) {
+function calcStatutSuivi(deadline, completionDate, etat) {
   if (etat !== "Terminé") return "En cours";
-  if (!deadline || !dateFin) return "En cours";
+  if (!deadline || !completionDate) return "En cours";
 
   const d1 = parseFR(deadline);
-  const d2 = parseFR(dateFin);
+  const d2 = parseFR(completionDate);
 
   if (!d1 || !d2) return "En cours";
 
   return d2 <= d1 ? "Respecté" : "Non respecté";
 }
+
+function allMaterielsRendus() {
+  const materiels = currentUser?.materiels || [];
+  if (materiels.length === 0) return true;
+
+  return materiels.every(m => {
+    const statut = (m.statut || "").trim();
+    return statut === "Rendu" || statut === "À ne pas rendre";
+  });
+}
+
+function allOutilsTermines() {
+  const outils = currentUser?.outils || [];
+  if (outils.length === 0) return true;
+
+  return outils.every(o => (o.statut || "").trim() === "Terminé");
+}
+
+window.toggleNoToolDelete = function () {
+  if (!currentUser) return;
+  currentUser.noToolDeletion = el.noToolDeleteCheckbox.checked;
+  updateEtat();
+};
 
 
 // ===============================
@@ -902,27 +1020,34 @@ function calcStatutSuivi(deadline, dateFin, etat) {
 function updateEtat() {
   if (!currentUser) return;
 
-  const outils = currentUser.outils || [];
   const previousEtat = currentUser.etat;
+  const materialsOk = allMaterielsRendus();
+  const noToolDeletion = !!currentUser.noToolDeletion;
+  const toolsOk = allOutilsTermines();
+  const showDepartDate = noToolDeletion && materialsOk;
+  const showDateFin = !noToolDeletion && toolsOk && materialsOk;
 
-  const allTermine = outils.length > 0 && outils.every(o => o.statut === "Terminé");
-
-  if (allTermine) {
-    currentUser.etat = "Terminé";
-
-    // La date de fin globale doit correspondre au jour où l'Etat passe à Terminé.
-    if (previousEtat !== "Terminé" || !currentUser.dateFin) {
-      currentUser.dateFin = todayFR();
-    }
-  } else {
-    currentUser.etat = "En cours";
+  if (noToolDeletion) {
+    currentUser.etat = materialsOk ? "Terminé" : "En cours";
     currentUser.dateFin = "";
+  } else {
+    if (showDateFin) {
+      currentUser.etat = "Terminé";
+      if (previousEtat !== "Terminé" || !currentUser.dateFin) {
+        currentUser.dateFin = todayFR();
+      }
+    } else {
+      currentUser.etat = "En cours";
+      currentUser.dateFin = "";
+    }
   }
 
-  currentUser.statutSuivi = calcStatutSuivi(currentUser.deadline, currentUser.dateFin, currentUser.etat);
+  const completionDate = noToolDeletion ? currentUser.datedepart : currentUser.dateFin;
+  currentUser.statutSuivi = calcStatutSuivi(currentUser.deadline, completionDate, currentUser.etat);
 
   el.etat.textContent = currentUser.etat;
-  el.dateFin.value = currentUser.dateFin || "";
+  el.dateFin.value = showDateFin ? currentUser.dateFin : "";
+  el.datedepart.textContent = showDepartDate ? (currentUser.datedepart || "") : "";
   el.ticketTyfanieDisplay.textContent = currentUser.ticketTyfanie || "";
   el.statutSuivi.textContent = currentUser.statutSuivi;
 
@@ -968,6 +1093,8 @@ window.save = async function () {
     if (currentUser.outils[idx]) currentUser.outils[idx].statut = sel.value;
   });
 
+  currentUser.noToolDeletion = el.noToolDeleteCheckbox.checked;
+  currentUser.noToolDeletion = el.noToolDeleteCheckbox.checked;
   currentUser.materiels = currentUser.materiels || [];
 
   materielTypes.forEach(select => {
@@ -1000,33 +1127,21 @@ window.save = async function () {
     currentUser.materiels[idx].statut = select.value || "Non Rendu";
   });
 
-  const outilsVides = currentUser.outils.filter(o => !o.outil || o.outil.trim() === "");
-  if (outilsVides.length > 0) {
-    el.outils.style.border = "3px solid #ef4444";
-    el.outils.style.backgroundColor = "#fef2f2";
-    el.outils.style.padding = "16px";
-    el.outils.style.borderRadius = "8px";
-
-    el.msg.textContent = "❌ Veuillez sélectionner un outil pour chaque ligne AVANT d'enregistrer !";
-    el.msg.style.color = "red";
-    el.msg.style.fontWeight = "bold";
-
-    isSaving = false;
-    return;
-  } else {
-    el.outils.style.border = "";
-    el.outils.style.backgroundColor = "";
-    el.outils.style.padding = "";
-    el.outils.style.borderRadius = "";
-  }
-
+  // Si le collaborateur n'a pas besoin de suppression d'outils, les lignes d'outil vides sont ignorées.
   currentUser.outils = currentUser.outils.filter(o => o.outil && o.outil.trim() !== "");
+
+  el.outils.style.border = "";
+  el.outils.style.backgroundColor = "";
+  el.outils.style.padding = "";
+  el.outils.style.borderRadius = "";
+
   currentUser.materiels = currentUser.materiels.filter(m => {
     const hasData = (m.materiel && m.materiel.trim() !== "") ||
                     (m.fabricant && m.fabricant.trim() !== "") ||
                     (m.modele && m.modele.trim() !== "") ||
                     (m.serial && m.serial.trim() !== "") ||
-                    (m.statut && m.statut !== "Non Rendu");
+                    (m.statut && m.statut !== "Non Rendu") ||
+                    (m.date && m.date.trim() !== "");
     return hasData;
   });
 
@@ -1093,6 +1208,7 @@ function resetForm() {
   el.statutSuivi.textContent = "";
   el.outils.innerHTML = "";
   el.materiels.innerHTML = "";
+  if (el.noToolDeleteCheckbox) el.noToolDeleteCheckbox.checked = false;
   currentUser = null;
 }
 
@@ -1166,11 +1282,10 @@ function updateStats() {
   const toolProgressPercent = total ? Math.round(((respecte + nonRespecte) / total) * 100) : 0;
 
   const collaboratorWithMateriel = dashboardData.filter(u => (u.materiels || []).length > 0);
-  const materielCollaboratorsTotal = collaboratorWithMateriel.length;
   const materielCollaboratorRespecte = collaboratorWithMateriel.filter(u => u.statutSuivi === "Respecté").length;
   const materielCollaboratorNonRespecte = collaboratorWithMateriel.filter(u => u.statutSuivi === "Non respecté").length;
   const materielCollaboratorEnCours = collaboratorWithMateriel.filter(u => u.statutSuivi === "En cours").length;
-  const materielProgressPercent = materielCollaboratorsTotal ? Math.round(((materielCollaboratorRespecte + materielCollaboratorNonRespecte) / materielCollaboratorsTotal) * 100) : 0;
+  const materielProgressPercent = total ? Math.round(((materielCollaboratorRespecte + materielCollaboratorNonRespecte) / total) * 100) : 0;
 
   document.getElementById("statCollaborateursTotal").textContent = total;
   document.getElementById("statOutilsTotal").textContent = outils.length;
@@ -1186,13 +1301,13 @@ function updateStats() {
   document.getElementById("statMaterielNoReturn").textContent = materiels.filter(m => m.statut === "À ne pas rendre").length;
 
   document.getElementById("toolProgressPercent").textContent = `${toolProgressPercent}%`;
-  document.getElementById("toolProgressSubtext").textContent = `${respecte + nonRespecte} / ${total} traités`;
+  document.getElementById("toolProgressSubtext").textContent = `${respecte + nonRespecte} / ${total} départs`;
   document.getElementById("toolRespecte").textContent = respecte;
   document.getElementById("toolEnCours").textContent = enCours;
   document.getElementById("toolNonRespecte").textContent = nonRespecte;
 
   document.getElementById("materielProgressPercent").textContent = `${materielProgressPercent}%`;
-  document.getElementById("materielProgressSubtext").textContent = `${materielCollaboratorRespecte + materielCollaboratorNonRespecte} / ${materielCollaboratorsTotal} traités`;
+  document.getElementById("materielProgressSubtext").textContent = `${materielCollaboratorRespecte + materielCollaboratorNonRespecte} / ${total} départs`;
   document.getElementById("materielRespecteSummary").textContent = materielCollaboratorRespecte;
   document.getElementById("materielEnCoursSummary").textContent = materielCollaboratorEnCours;
   document.getElementById("materielNonRespecteSummary").textContent = materielCollaboratorNonRespecte;
@@ -1201,7 +1316,8 @@ function updateStats() {
 function updateCharts() {
   if (!dashboardData || dashboardData.length === 0) {
     if (chartSuivi) { chartSuivi.destroy(); chartSuivi = null; }
-    if (chartEtat) { chartEtat.destroy(); chartEtat = null; }
+    if (chartEtatOutils) { chartEtatOutils.destroy(); chartEtatOutils = null; }
+    if (chartEtatMateriel) { chartEtatMateriel.destroy(); chartEtatMateriel = null; }
     return;
   }
 
@@ -1242,14 +1358,14 @@ function updateCharts() {
     // Erreur silencieuse
   }
 
-  // Chart Etat
+  // Chart Etat Outils
   try {
-    const ctxEtat = document.getElementById("chartEtat");
-    if (!ctxEtat) return;
+    const ctxEtatOutils = document.getElementById("chartEtatOutils");
+    if (!ctxEtatOutils) return;
 
-    if (chartEtat) chartEtat.destroy();
+    if (chartEtatOutils) chartEtatOutils.destroy();
 
-    chartEtat = new Chart(ctxEtat, {
+    chartEtatOutils = new Chart(ctxEtatOutils, {
       type: "doughnut",
       data: {
         labels: ["Terminé", "En cours"],
@@ -1257,14 +1373,44 @@ function updateCharts() {
           data: [etatTermine, etatEnCours],
           backgroundColor: ["#3b82f6", "#6b7280"],
           borderColor: ["#1e40af", "#4b5563"],
-          borderWidth: 2
+          borderWidth: 3
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: true,
         plugins: {
-          legend: { position: "bottom", labels: { padding: 12, font: { size: 12 }, usePointStyle: true } }
+          legend: { position: "bottom", labels: { padding: 12, font: { size: 12, weight: "bold" }, usePointStyle: true } }
+        }
+      }
+    });
+  } catch (err) {
+    // Erreur silencieuse
+  }
+
+  // Chart Etat Matériel (même données que outils pour l'instant)
+  try {
+    const ctxEtatMateriel = document.getElementById("chartEtatMateriel");
+    if (!ctxEtatMateriel) return;
+
+    if (chartEtatMateriel) chartEtatMateriel.destroy();
+
+    chartEtatMateriel = new Chart(ctxEtatMateriel, {
+      type: "doughnut",
+      data: {
+        labels: ["Terminé", "En cours"],
+        datasets: [{
+          data: [etatTermine, etatEnCours],
+          backgroundColor: ["#3b82f6", "#6b7280"],
+          borderColor: ["#1e40af", "#4b5563"],
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { position: "bottom", labels: { padding: 12, font: { size: 12, weight: "bold" }, usePointStyle: true } }
         }
       }
     });
