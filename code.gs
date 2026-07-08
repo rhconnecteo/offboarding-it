@@ -141,7 +141,8 @@ function parseDynamicItems(row, startCol, fieldNames) {
       if (value) hasValue = true;
     });
 
-    if (hasValue) {
+    // Do not keep an item that has no main identifier (e.g. blank materiel/ouil) even if a date or status exists.
+    if (hasValue && item[fieldNames[0]]) {
       items.push(item);
     }
   }
@@ -281,11 +282,14 @@ function getUsersAPI() {
 
   // Build a map of restitutions indexed by matricule (to avoid relying on identical row numbers)
   const restitutionsByMatricule = {};
+  const restitutionEtatByMatricule = {};
   const restitutionMatriculeCol = getMainColumnIndex('matricule', restitutionHeaderMap, restitutionSh, undefined, 1);
+  const restitutionEtatCol = getMainColumnIndex('etat', restitutionHeaderMap, restitutionSh, undefined, 13);
 
   for (let j = 1; j < restitutionData.length; j++) {
     const matriculeRest = String((restitutionData[j][restitutionMatriculeCol] || "")).trim();
     if (!matriculeRest) continue;
+    restitutionEtatByMatricule[matriculeRest] = String((restitutionData[j][restitutionEtatCol] || "")).trim();
     restitutionsByMatricule[matriculeRest] = parseDynamicItems(restitutionData[j], materielsStart, [
       'materiel', 'fabricant', 'modele', 'serial', 'statut', 'date'
     ]);
@@ -312,8 +316,10 @@ function getUsersAPI() {
     if (!matricule) continue;
 
     const etat = (data[i][etatCol] || "En cours").trim();
+    const restitutionEtat = String(restitutionEtatByMatricule[matricule] || "").trim();
 
-    if (etat === "Terminé") continue;
+    // Exclude the user from the form dropdown only when BOTH sheets report Terminé.
+    if (etat === "Terminé" && restitutionEtat === "Terminé") continue;
 
     // =============================
     // Lecture des outils dynamiques
@@ -365,6 +371,7 @@ function getUsersAPI() {
       ticketTyfanie: data[i][ticketTyfanieCol] || "",
       statutSuivi: data[i][statutSuiviCol] || "",
       etat: etat,
+      restitutionEtat: restitutionEtat,
 
       outils: outils,
       materiels: restitutionsByMatricule[matricule] || []
@@ -491,8 +498,10 @@ function saveUserAPI(user) {
     restitutionSh.getRange(restitutionRow, restitutionStartColOneBased, 1, restitutionLastCol - (restitutionStartColOneBased - 1)).clearContent();
   }
 
-  if (user.materiels && user.materiels.length > 0) {
-    user.materiels.forEach((m, i) => {
+  const validMateriels = (Array.isArray(user.materiels) ? user.materiels : []).filter(m => String(m.materiel || "").trim() !== "");
+
+  if (validMateriels.length > 0) {
+    validMateriels.forEach((m, i) => {
       const colOneBased = restitutionStartColOneBased + i * 6;
 
       restitutionSh.getRange(restitutionRow, colOneBased).setValue(m.materiel || "");
@@ -518,20 +527,24 @@ function saveUserAPI(user) {
           // Prefer user-provided dateFin, otherwise use today's date
           const toWrite = user.dateFin && String(user.dateFin).trim() ? new Date(user.dateFin) : new Date();
           sh.getRange(row, dateFinCol + 1).setValue(toWrite);
-          // Also write Date Fin into restitution sheet (column K expected)
-          try {
-            const restitutionDateFinCol = getMainColumnIndex('date fin', restitutionHeaderMap, restitutionSh, restitutionToolsStart, 11);
-            if (typeof restitutionDateFinCol === 'number') {
-              restitutionSh.getRange(restitutionRow, restitutionDateFinCol + 1).setValue(toWrite);
-            }
-          } catch (e2) {
-            Logger.log('Impossible d\'écrire dateFin dans restitution: ' + e2.message);
-          }
         } else {
-          // Not all returned: clear dateFin to indicate incomplete
-          sh.getRange(row, dateFinCol + 1).setValue('');
+          // Not all returned: keep the dateFin if already set, otherwise clear it only when no material is present
+          if (!user.dateFin || !user.materiels || user.materiels.length === 0) {
+            sh.getRange(row, dateFinCol + 1).setValue('');
+          } else {
+            sh.getRange(row, dateFinCol + 1).setValue(user.dateFin);
+          }
         }
       }
+    }
+
+    try {
+      const restitutionDateFinCol = getMainColumnIndex('date fin', restitutionHeaderMap, restitutionSh, restitutionToolsStart, 11);
+      if (typeof restitutionDateFinCol === 'number') {
+        restitutionSh.getRange(restitutionRow, restitutionDateFinCol + 1).setValue(user.dateFin || '');
+      }
+    } catch (e2) {
+      Logger.log('Impossible d\'écrire dateFin dans restitution: ' + e2.message);
     }
   } catch (e) {
     // ne pas échouer la sauvegarde si le calcul de dateFin plante
@@ -558,13 +571,16 @@ function getDashboardAPI() {
   const materielsStart = normalizeToolsStartIndex(findToolsStartIndex(restitutionHeaderMap, restitutionSh));
   // Build a map of restitutions indexed by matricule (avoid relying on identical row numbers)
   const restitutionsByMatricule = {};
+  const restitutionEtatByMatricule = {};
   const restitutionMatriculeCol2 = getMainColumnIndex('matricule', restitutionHeaderMap, restitutionSh, undefined, 1);
+  const restitutionEtatCol2 = getMainColumnIndex('etat', restitutionHeaderMap, restitutionSh, undefined, 13);
 
   for (let j = 1; j < restitutionData.length; j++) {
     const matriculeRest = String((restitutionData[j][restitutionMatriculeCol2] || "")).trim();
     if (!matriculeRest) continue;
+    restitutionEtatByMatricule[matriculeRest] = String((restitutionData[j][restitutionEtatCol2] || "")).trim();
     restitutionsByMatricule[matriculeRest] = parseDynamicItems(restitutionData[j], materielsStart, [
-      'materiel', 'fabricant', 'modele', 'serial', 'statut'
+      'materiel', 'fabricant', 'modele', 'serial', 'statut', 'date'
     ]);
   }
   const matriculeCol = getMainColumnIndex('matricule', headerMap, sh, toolsStart, 1);
@@ -586,6 +602,8 @@ function getDashboardAPI() {
     const matricule = (data[i][matriculeCol] || "").trim();
 
     if (!matricule) continue;
+
+    const restitutionEtat = String(restitutionEtatByMatricule[matricule] || "").trim();
 
     // =============================
     // Lecture des outils dynamiques
@@ -635,6 +653,7 @@ function getDashboardAPI() {
       ticketTyfanie: data[i][ticketTyfanieCol] || "",
       statutSuivi: data[i][statutSuiviCol] || "",
       etat: data[i][etatCol] || "",
+      restitutionEtat: restitutionEtat,
 
       outils: outils,
       materiels: restitutionsByMatricule[matricule] || []

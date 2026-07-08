@@ -6,7 +6,6 @@
   <title>Offboarding - IT</title>
   <link rel="icon" type="image/png" href="mathematiques.png">
   <link rel="stylesheet" href="style.css">
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -20,37 +19,17 @@
           <h1>🔐 Authentication</h1>
           <p>IT Support - Offboarding Tracking</p>
         </div>
-        
         <form id="loginForm" class="login-form">
           <div class="login-form-group">
             <label for="username">👤 Utilisateur</label>
-            <input 
-              type="text" 
-              id="username" 
-              name="username" 
-              placeholder="Entrez votre identifiant" 
-              required 
-              autocomplete="username"
-            >
+            <input type="text" id="username" name="username" placeholder="Entrez votre identifiant" required autocomplete="username">
           </div>
-
           <div class="login-form-group">
             <label for="password">🔑 Mot de passe</label>
-            <input 
-              type="password" 
-              id="password" 
-              name="password" 
-              placeholder="Entrez votre mot de passe" 
-              required 
-              autocomplete="current-password"
-            >
+            <input type="password" id="password" name="password" placeholder="Entrez votre mot de passe" required autocomplete="current-password">
           </div>
-
           <div id="loginMessage" class="login-message"></div>
-
-          <button type="submit" class="btn btn-login">
-            🚀 Se connecter
-          </button>
+          <button type="submit" class="btn btn-login">🚀 Se connecter</button>
         </form>
       </div>
     </div>
@@ -58,7 +37,6 @@
 
   <header class="header">
     <h1>Support IT - Suivi Offboarding</h1>
-
     <div class="header-buttons">
       <button id="btnForm" class="btn active" onclick="showForm()">📝 Formulaire</button>
       <button id="btnDash" class="btn btn-secondary" onclick="showDashboard()">📊 Dashboard</button>
@@ -66,14 +44,9 @@
     </div>
   </header>
 
-
-  <!-- ======================
-        FORMULAIRE
-  ======================= -->
+  <!-- ====================== FORMULAIRE ======================= -->
   <section id="formCard" class="card">
-
     <h2>📝 Formulaire de suivi Offboarding</h2>
-
     <div class="form-group">
       <label>👤 Matricule</label>
       <select id="matricule" onchange="loadUser()">
@@ -81,98 +54,75 @@
       </select>
     </div>
 
-
     <div class="info-grid">
-
       <div>
         <label>👤 Matricule</label>
         <div id="affichageMatricule" class="readonly" style="font-weight: bold; color: #0891b2;"></div>
       </div>
-
       <div>
         <label>👥 Nom et Prénoms</label>
         <div id="nom" class="readonly"></div>
       </div>
-
       <div>
         <label>✓ Statut</label>
         <div id="statut" class="readonly"></div>
       </div>
-
       <div>
         <label>💼 Fonction</label>
         <div id="fonction" class="readonly"></div>
       </div>
-
       <div>
         <label>🏢 Rattachement</label>
         <div id="rattachement" class="readonly"></div>
       </div>
-
       <div>
         <label>📅 Date de départ</label>
         <div id="datedepart" class="readonly"></div>
       </div>
-
       <div>
         <label>🔐 Login</label>
         <div id="login" class="readonly"></div>
       </div>
-
       <div>
         <label>📆 Date de création</label>
         <div id="dateCreation" class="readonly"></div>
       </div>
-
       <div>
         <label>⏰ Date de deadline</label>
         <div id="deadline" class="readonly"></div>
       </div>
-
       <div>
         <label>🎯 Etat</label>
         <div id="etat" class="readonly status-box"></div>
       </div>
-
       <div>
         <label>🏁 Date Fin</label>
         <input type="text" id="dateFin" readonly />
       </div>
-
       <div>
         <label>🎫 Ticket Tyfanie</label>
         <div id="ticketTyfanieDisplay" class="readonly"></div>
       </div>
-
       <div class="checkbox-card">
         <label>
           <input type="checkbox" id="noToolDeleteCheckbox" onchange="toggleNoToolDelete()" />
           ⛔ Aucune suppression d'outils requise
         </label>
       </div>
-
       <div>
         <label>📊 Statut Suivi</label>
         <div id="statutSuivi" class="readonly"></div>
       </div>
-
     </div>
 
-
     <hr/>
-
     <h3>🛠️ Outils</h3>
-
     <div id="outils"></div>
-
     <button class="btn btn-secondary" onclick="addOutil()">➕ Ajouter un outil</button>
 
     <hr/>
-
     <h3>🎒 Matériel</h3>
-
     <div id="materiels"></div>
-
     <button class="btn btn-secondary" onclick="addMateriel()">➕ Ajouter un matériel</button>
 
     <span id="msg" class="msg-display"></span>
@@ -180,19 +130,16 @@
     <div class="actions">
       <button class="btn btn-primary" onclick="save()">💾 Enregistrer</button>
     </div>
-
   </section>
 
-
-  <!-- ======================
-        DASHBOARD
-  ======================= -->
+  <!-- ====================== DASHBOARD ======================= -->
   <section id="dashboardCard" class="card hidden">
     <h2>📊 Dashboard - Récapitulatif</h2>
 
+    <!-- Cartes de résumé -->
     <div class="summary-row">
       <div class="summary-card">
-        <h3>� Nombre de collaborateurs</h3>
+        <h3>👥 Nombre de collaborateurs</h3>
         <div class="summary-value" id="statCollaborateursTotal">0</div>
         <div class="summary-text">Total collaborateurs suivis</div>
       </div>
@@ -202,55 +149,29 @@
         <div class="summary-text">Total d'outils à traiter</div>
       </div>
       <div class="summary-card">
-        <h3>📦 Matériel à restituer</h3>
+        <h3>📦 Total matériel</h3>
         <div class="summary-value" id="statMaterielItemsTotal">0</div>
-        <div class="summary-text">Total de matériels à restituer</div>
+        <div class="summary-text">Total des matériels enregistrés</div>
       </div>
     </div>
 
+    <!-- Progressions -->
     <div class="summary-row">
       <div class="summary-card">
         <h3>🛠️ Outils à supprimer</h3>
         <div class="summary-value" id="toolProgressPercent">0%</div>
         <div class="summary-text">Progression des collaborateurs</div>
         <div class="summary-subtext" id="toolProgressSubtext">0 / 0 traités</div>
-        <div class="summary-breakdown">
-          <div class="summary-item">
-            <strong id="toolRespecte">0</strong>
-            <span>Respecté</span>
-          </div>
-          <div class="summary-item">
-            <strong id="toolEnCours">0</strong>
-            <span>En cours</span>
-          </div>
-          <div class="summary-item">
-            <strong id="toolNonRespecte">0</strong>
-            <span>Non respecté</span>
-          </div>
-        </div>
       </div>
       <div class="summary-card">
         <h3>📦 Matériel à restituer</h3>
         <div class="summary-value" id="materielProgressPercent">0%</div>
         <div class="summary-text">Progression des collaborateurs</div>
-        <div class="summary-subtext" id="materielProgressSubtext">0 / 0 traités</div>
-        <div class="summary-breakdown">
-          <div class="summary-item">
-            <strong id="materielRespecteSummary">0</strong>
-            <span>Respecté</span>
-          </div>
-          <div class="summary-item">
-            <strong id="materielEnCoursSummary">0</strong>
-            <span>En cours</span>
-          </div>
-          <div class="summary-item">
-            <strong id="materielNonRespecteSummary">0</strong>
-            <span>Non respecté</span>
-          </div>
-        </div>
+        <div class="summary-subtext" id="materielProgressSubtext">0 / 0 collaborateurs</div>
       </div>
     </div>
 
+    <!-- Graphiques -->
     <div class="dashboard-charts">
       <div class="chart-container">
         <h3>📈 Outils - Répartition collaborateurs</h3>
@@ -270,6 +191,7 @@
       </div>
     </div>
 
+    <!-- Statistiques -->
     <div class="stats-row">
       <div class="stat-card">
         <label>📊 Total</label>
@@ -308,25 +230,24 @@
       </div>
     </div>
 
+    <!-- Filtres -->
     <div class="filters">
       <input type="text" id="searchBox" placeholder="🔍 Rechercher Matricule / Nom / Login" class="search-input">
-
       <select id="etatFilter">
         <option value="">🎯 Tous les Etats</option>
         <option value="En cours">⏳ En cours</option>
         <option value="Terminé">✅ Terminé</option>
       </select>
-
       <select id="suiviFilter">
         <option value="">📈 Tous les Statuts Suivi</option>
         <option value="Respecté">✅ Respecté</option>
         <option value="Non respecté">❌ Non respecté</option>
         <option value="En cours">⏳ En cours</option>
       </select>
-
       <button class="btn btn-secondary" onclick="loadDashboard()">🔄 Actualiser</button>
     </div>
 
+    <!-- Tableau -->
     <div class="table-container">
       <table id="dashboardTable" class="dashboard-table">
         <thead>
@@ -346,23 +267,17 @@
             <th>⚙️ Actions</th>
           </tr>
         </thead>
-
         <tbody></tbody>
       </table>
     </div>
-
   </section>
 
-
-  <!-- ======================
-        DETAIL OUTILS
-  ======================= -->
+  <!-- ====================== DETAIL OUTILS ======================= -->
   <section id="detailCard" class="card hidden">
     <h2>📋 Liste des outils par collaborateur</h2>
 
     <!-- Filtres -->
     <div class="filters-container">
-      <!-- Matricule Filter -->
       <div class="filter-group">
         <label>👤 Filtrer par Matricule</label>
         <div class="searchable-dropdown" id="matriculeDropdown">
@@ -373,7 +288,6 @@
         </div>
       </div>
 
-      <!-- Fonction Filter -->
       <div class="filter-group">
         <label>💼 Filtrer par Fonction</label>
         <div class="searchable-dropdown" id="fonctionDropdown">
@@ -384,7 +298,6 @@
         </div>
       </div>
 
-      <!-- Rattachement Filter -->
       <div class="filter-group">
         <label>🏢 Filtrer par Rattachement</label>
         <div class="searchable-dropdown" id="rattachementDropdown">
@@ -395,7 +308,6 @@
         </div>
       </div>
 
-      <!-- Statut Filter -->
       <div class="filter-group">
         <label>✓ Filtrer par Statut</label>
         <div class="searchable-dropdown" id="statutDropdown">
@@ -408,7 +320,6 @@
         </div>
       </div>
 
-      <!-- Ticket Filter -->
       <div class="filter-group">
         <label>🎟️ Filtrer par N° Ticket</label>
         <div class="searchable-dropdown" id="ticketDropdown">
@@ -440,21 +351,16 @@
             <th>⚙️ Actions</th>
           </tr>
         </thead>
-        <tbody id="detailTableBody">
-        </tbody>
+        <tbody id="detailTableBody"></tbody>
       </table>
     </div>
 
     <div id="detailEmptyMessage" style="text-align: center; padding: 20px; color: #999; display: none;">
       Aucune donnée à afficher
     </div>
-
   </section>
 
-
-  <!-- ======================
-        MODAL DETAILS OUTILS
-  ======================= -->
+  <!-- ====================== MODAL DETAILS ======================= -->
   <div id="detailsModal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
@@ -462,7 +368,6 @@
         <button class="modal-close" onclick="closeDetails()">✕</button>
       </div>
       <div class="modal-body">
-        <!-- Infos générales -->
         <div class="details-info">
           <div class="info-item">
             <label>📅 Date de création (Login)</label>
@@ -474,10 +379,8 @@
           </div>
         </div>
 
-        <!-- Séparateur -->
         <hr style="margin: 20px 0; border: none; border-top: 1px solid #e6e9ee;">
 
-        <!-- Détail des outils -->
         <h4 style="margin: 0 0 15px 0; color: var(--muted); font-size: 13px; font-weight: 600;">Détail des outils</h4>
         <table class="details-table">
           <thead>
@@ -488,17 +391,11 @@
               <th>Date Fin</th>
             </tr>
           </thead>
-          <tbody id="detailsTableBody">
-          </tbody>
+          <tbody id="detailsTableBody"></tbody>
         </table>
       </div>
-      <!-- <div class="modal-footer">
-        <button class="btn custom-btn" onclick="closeDetails()">✕ Fermer</button>
-
-      </div> -->
     </div>
   </div>
-
 
   <script src="script.js"></script>
 </body>
