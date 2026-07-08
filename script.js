@@ -226,16 +226,24 @@ const OUTILS_DISPONIBLES = [
 let users = [];
 let currentUser = null;
 let dashboardData = [];
+// Cache pour dashboard pour réponses rapides (ms)
+let dashboardCache = { data: null, ts: 0, ttl: 7000 };
 let chartSuivi = null;
 let chartEtatOutils = null;
 let chartMaterielStatut = null;
 let chartEtatMateriel = null;
 let detailsCache = {};
 let isSaving = false;
+const VIEW_KEY = "offboarding-active-view";
+const FORM_MATRICULE_KEY = "offboarding-form-matricule";
 
 // ===============================
 // NAVIGATION
 // ===============================
+function setActiveView(view) {
+  sessionStorage.setItem(VIEW_KEY, view);
+}
+
 function showDashboard() {
   el.formCard.classList.add("hidden");
   el.dashboardCard.classList.remove("hidden");
@@ -243,6 +251,7 @@ function showDashboard() {
   document.getElementById("btnForm")?.classList.remove("active");
   document.getElementById("btnDash")?.classList.add("active");
   document.getElementById("btnDetail")?.classList.remove("active");
+  setActiveView("dashboard");
   loadDashboard();
 }
 
@@ -253,6 +262,7 @@ function showForm() {
   document.getElementById("btnDash")?.classList.remove("active");
   document.getElementById("btnDetail")?.classList.remove("active");
   document.getElementById("btnForm")?.classList.add("active");
+  setActiveView("form");
 }
 
 function showDetail() {
@@ -262,6 +272,7 @@ function showDetail() {
   document.getElementById("btnForm")?.classList.remove("active");
   document.getElementById("btnDash")?.classList.remove("active");
   document.getElementById("btnDetail")?.classList.add("active");
+  setActiveView("detail");
   loadDetail();
 }
 
@@ -366,6 +377,9 @@ async function loadUsers(includeTermine = false) {
     const action = includeTermine ? "getDashboard" : "getUsers";
     const data = await apiRequest(action);
     users = data || [];
+    // Préserver la sélection en cours ou restaurer depuis la session
+    const prevSelected = el.matricule ? el.matricule.value : "";
+    const savedSelected = sessionStorage.getItem(FORM_MATRICULE_KEY) || "";
     el.matricule.innerHTML = `<option value="">-- Choisir un matricule --</option>`;
     users.forEach((u) => {
       const opt = document.createElement("option");
@@ -373,6 +387,11 @@ async function loadUsers(includeTermine = false) {
       opt.textContent = `${u.matricule} - ${u.nom}`;
       el.matricule.appendChild(opt);
     });
+    const toRestore = prevSelected || savedSelected;
+    if (toRestore) {
+      const exists = Array.from(el.matricule.options).some(o => o.value === toRestore);
+      if (exists) el.matricule.value = toRestore;
+    }
   } catch (err) {
     showApiError(`Impossible de charger la liste des utilisateurs: ${err.message}`);
   }
@@ -398,6 +417,7 @@ window.loadUser = function () {
     el.msg.style.color = "";
     return;
   }
+  sessionStorage.setItem(FORM_MATRICULE_KEY, matriculeSelected);
   currentUser = users.find(u => u.matricule === matriculeSelected);
   if (!currentUser) {
     resetForm();
@@ -883,12 +903,21 @@ function resetForm() {
 // ===============================
 // DASHBOARD
 // ===============================
-async function loadDashboard() {
+async function loadDashboard(force = false) {
   try {
     el.msg.textContent = "⏳ Chargement du dashboard en cours...";
     el.msg.style.color = "blue";
-    const data = await apiRequest("getDashboard");
-    dashboardData = data || [];
+
+    // Utiliser le cache si demandé
+    if (!force && dashboardCache.data && (Date.now() - dashboardCache.ts) < dashboardCache.ttl) {
+      dashboardData = dashboardCache.data;
+    } else {
+      const data = await apiRequest("getDashboard");
+      dashboardData = data || [];
+      dashboardCache.data = dashboardData;
+      dashboardCache.ts = Date.now();
+    }
+
     updateStats();
     updateCharts();
     renderDashboard(dashboardData);
@@ -1310,8 +1339,24 @@ document.addEventListener("DOMContentLoaded", function() {
   checkAuthentication();
 });
 
-function initApp() {
-  loadUsers();
+async function initApp() {
+  await loadUsers();
+  restoreActiveView();
+}
+
+function restoreActiveView() {
+  const view = sessionStorage.getItem(VIEW_KEY) || "form";
+  if (view === "dashboard") {
+    showDashboard();
+  } else if (view === "detail") {
+    showDetail();
+  } else {
+    showForm();
+    const savedMatricule = sessionStorage.getItem(FORM_MATRICULE_KEY);
+    if (savedMatricule && el.matricule && el.matricule.value === savedMatricule) {
+      loadUser();
+    }
+  }
 }
 
 function showApiError(message) {
